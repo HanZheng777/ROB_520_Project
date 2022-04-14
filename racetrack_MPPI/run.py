@@ -3,7 +3,10 @@ import copy
 import gym
 import highway_env
 from stable_baselines3 import DQN, DDPG, PPO
-from racetrack_PPO.env_config import config
+from highway_env.envs.racetrack_env import RacetrackEnv
+
+import time
+from env_config import config
 
 
 class MPPI(object):
@@ -18,12 +21,12 @@ class MPPI(object):
         """
         self.num_rollout = num_rollout
         self.look_ahead = look_ahead
-        self.env = gym.make("racetrack-v0")
+        self.env = RacetrackEnv()
         self.env.configure(config)
         self.env.reset()
         self.std = prior_std
         self.lamda = lamda
-        self.RL_model = PPO.load("model/best_model", self.env)
+        self.RL_model = PPO.load("model/best_model")
 
 
     def export_env_vehicle_state(self):
@@ -31,9 +34,10 @@ class MPPI(object):
 
         :return:
         """
-        self.controlled_vehicle_copy = copy.deepcopy(self.env.controlled_vehicles[0])
+
         self.other_vehicle_copy = [copy.deepcopy(vehicle) for vehicle in self.env.road.vehicles]
-        self.env_step = self.env.env.steps
+        self.env_step_copy = self.env.steps
+        self.time_copy = self.env.time
 
 
     def return_initial_obs(self):
@@ -41,10 +45,12 @@ class MPPI(object):
 
         :return:
         """
-        self.env.controlled_vehicles[0] = copy.deepcopy(self.controlled_vehicle_copy)
-        self.env.vehicles = copy.deepcopy(self.controlled_vehicle_copy)
         self.env.road.vehicles = copy.deepcopy(self.other_vehicle_copy)
-        self.env.env.steps = self.env_step
+        self.env.controlled_vehicles[0] = self.env.road.vehicles[0]
+        self.env.vehicles = self.env.road.vehicles[0]
+
+        self.env.steps = self.env_step_copy
+        self.env.time = self.time_copy
 
 
     def rollout(self, action_traj):
@@ -125,6 +131,7 @@ class MPPI(object):
         while not done:
 
             self.export_env_vehicle_state()
+            self.return_initial_obs()
             variations, values = self.rollout(action_traj)
             action_traj = self.get_weighted_action_traj(action_traj, variations, values)
             self.return_initial_obs()
@@ -147,7 +154,7 @@ class MPPI(object):
 
 
 if __name__ == "__main__":
-    controller = MPPI(look_ahead=5, num_rollout=10, prior_std=0.001, lamda=1)
+    controller = MPPI(look_ahead=5, num_rollout=10, prior_std=0.02, lamda=1)
     for j in range(1):
         controller.run()
 
