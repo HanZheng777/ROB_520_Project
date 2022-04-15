@@ -3,7 +3,7 @@ import numpy as np
 observe_vehicles = 3
 config = {"observation": {
                 "type": "OccupancyGrid",
-                "features": ['presence', 'vx','vy','on_road'],
+                "features": ['presence', 'on_road'],
                 "grid_size": [[-18, 18], [-18, 18]],
                 "grid_step": [3, 3],
                 "as_image": False,

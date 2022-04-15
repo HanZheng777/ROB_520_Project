@@ -27,7 +27,7 @@ if __name__ == '__main__':
                 gamma=0.9,
                 verbose=1,
                 )
-    tmp_path = "model/"
+    tmp_path = "RL_action_model/"
     eval_callback = EvalCallback(env, best_model_save_path=tmp_path,
                                  log_path=tmp_path + 'log/', eval_freq=10000,
                                  deterministic=True, render=True)

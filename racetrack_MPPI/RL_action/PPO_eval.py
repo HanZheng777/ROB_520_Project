@@ -4,7 +4,7 @@ if __name__ == '__main__':
     env = gym.make("racetrack-v0")
     env.configure((config))
     env.reset()
-    model = PPO.load("model/best_model", env)
+    model = PPO.load("RL_action_model/best_model", env)
     # env = RecordVideo(env, video_folder="racetrack_ppo/videos", episode_trigger=lambda e: True)
     # env.unwrapped.set_record_video_wrapper(env)
 
