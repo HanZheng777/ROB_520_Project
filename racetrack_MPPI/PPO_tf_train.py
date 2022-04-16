@@ -136,6 +136,8 @@ class Agent:
         self.look_ahead = look_ahead
         self.RL_action_agent = PPO.load(RL_action_agent)
 
+
+
         print('done')
 
     def export_env_vehicle_state(self):
@@ -183,7 +185,17 @@ class Agent:
             batch = np.append(batch, elem, axis=0)
         return batch
 
-    def train(self, max_episodes=1000):
+    def train(self, save_path, max_episodes=15, saving_freq=5, train_from_scratch=False):
+
+        step = tf.Variable(1)
+        actor_ckpt = tf.train.Checkpoint(step=step, optimizer=self.actor.model, model=self.actor_opt)
+        critic_ckpt = tf.train.Checkpoint(step=step, optimizer=self.critic_opt, model=self.critic.model)
+        actor_save_path = save_path + "actor/"
+        critic_save_path = save_path + "critic/"
+
+        if train_from_scratch:
+            actor_ckpt.restore(tf.train.latest_checkpoint(actor_save_path))
+            critic_ckpt.restore(tf.train.latest_checkpoint(critic_save_path))
 
         for ep in range(max_episodes):
             obs_batch = []
@@ -239,9 +251,11 @@ class Agent:
                         look_ahead_rewards, v_values, next_v_value, done)
 
                     for epoch in range(args.epochs):
+                        step.assign_add(1)
                         actor_loss = self.actor.train(
                             old_policys, obss, perturbations, gaes)
                         critic_loss = self.critic.train(obss, td_targets)
+
 
                     obs_batch = []
                     perturbation_batch = []
@@ -250,6 +264,10 @@ class Agent:
 
                 episode_reward += look_ahead_reward[0][0]
                 obs = next_obs.reshape(self.env.observation_space.shape)
+
+            if ep % saving_freq == 0:
+                actor_ckpt.save(actor_save_path)
+                critic_ckpt.save(critic_save_path)
 
             print('EP{} EpisodeReward={}'.format(ep, episode_reward))
 
@@ -261,7 +279,7 @@ def main():
 
     agent = Agent(env, look_ahead=5, max_perturbation_std=0.02,
                   RL_action_agent="RL_action_model/best_model", multimodal=False)
-    agent.train()
+    agent.train("RL_perturbation_model/")
 
 
 if __name__ == "__main__":
