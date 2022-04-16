@@ -32,7 +32,7 @@ if __name__ == '__main__':
                 gamma=0.9,
                 verbose=1,
                 )
-    tmp_path = "RL_action_model/"
+    tmp_path = "PPO_action_model/"
     eval_callback = EvalCallback(env, best_model_save_path=tmp_path,
                                  log_path=tmp_path + 'log/', eval_freq=10000,
                                  deterministic=True, render=True)
@@ -40,4 +40,4 @@ if __name__ == '__main__':
     model.set_logger(new_logger)
     # Train the model
     model.learn(total_timesteps=int(1e4), callback=eval_callback)
-    model.save("RL_action_model/latest_model")
+    model.save("PPO_action_model/latest_model")

@@ -278,8 +278,8 @@ def main():
     env.reset()
 
     agent = Agent(env, look_ahead=5, max_perturbation_std=0.02,
-                  RL_action_agent="RL_action_model/best_model", multimodal=False)
-    agent.train("RL_perturbation_model/")
+                  RL_action_agent="PPO_action_model/best_model", multimodal=False)
+    agent.train("PPO_perturbation_model/")
 
 
 if __name__ == "__main__":
