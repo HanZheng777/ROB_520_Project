@@ -187,11 +187,13 @@ class Agent:
 
     def train(self, save_path, max_episodes=15, saving_freq=5, train_from_scratch=False):
 
-        step = tf.Variable(1)
+        step = tf.Variable(1, trainable=False, dtype="int64")
         actor_ckpt = tf.train.Checkpoint(step=step, optimizer=self.actor.model, model=self.actor_opt)
         critic_ckpt = tf.train.Checkpoint(step=step, optimizer=self.critic_opt, model=self.critic.model)
         actor_save_path = save_path + "actor/"
         critic_save_path = save_path + "critic/"
+        log_path = save_path + "log/"
+        summary_writer = tf.summary.create_file_writer(log_path)
 
         if train_from_scratch:
             actor_ckpt.restore(tf.train.latest_checkpoint(actor_save_path))
@@ -203,7 +205,8 @@ class Agent:
             look_ahead_reward_batch = []
             old_policy_batch = []
 
-            episode_reward, done = 0, False
+            episode_reward = tf.Variable(0, trainable=False)
+            done = False
 
             obs = self.env.reset()
 
@@ -256,20 +259,27 @@ class Agent:
                             old_policys, obss, perturbations, gaes)
                         critic_loss = self.critic.train(obss, td_targets)
 
+                        with summary_writer.as_default():
+                            tf.summary.scalar("actor_loss", actor_loss, step=step)
+                            tf.summary.scalar('critic_loss', critic_loss, step=step)
+
 
                     obs_batch = []
                     perturbation_batch = []
                     look_ahead_reward_batch = []
                     old_policy_batch = []
 
-                episode_reward += look_ahead_reward[0][0]
+                episode_reward.assign_add(look_ahead_reward[0][0])
                 obs = next_obs.reshape(self.env.observation_space.shape)
 
             if ep % saving_freq == 0:
                 actor_ckpt.save(actor_save_path)
                 critic_ckpt.save(critic_save_path)
 
-            print('EP{} EpisodeReward={}'.format(ep, episode_reward))
+            with summary_writer.as_default():
+                tf.summary.scalar("episode_reward", episode_reward, step=tf.convert_to_tensor(ep, dtype="int64"))
+
+            print('EP{} EpisodeReward={}'.format(ep, int(episode_reward)))
 
 
 def main():
@@ -277,9 +287,15 @@ def main():
     env.configure(config)
     env.reset()
 
-    agent = Agent(env, look_ahead=5, max_perturbation_std=0.02,
-                  RL_action_agent="PPO_action_model/best_model", multimodal=False)
-    agent.train("PPO_perturbation_model/")
+    agent = Agent(env, look_ahead=5,
+                  max_perturbation_std=0.1,
+                  RL_action_agent="PPO_action_model/best_model",
+                  multimodal=False)
+
+    agent.train(save_path="PPO_perturbation_model/",
+                max_episodes=50,
+                saving_freq=10,
+                train_from_scratch=False)
 
 
 if __name__ == "__main__":
